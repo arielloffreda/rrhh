@@ -51,3 +51,49 @@ export async function signPayslip(id: string) {
     revalidatePath('/dashboard/payslips')
     return { success: true }
 }
+
+export async function uploadPayslip(data: { userId: string, period: Date, fileUrl: string }) {
+    const session = await auth()
+    const user = session?.user as any
+
+    if (!user?.id) throw new Error("Unauthorized")
+    // Check ADMIN role
+
+    // Check if payslip already exists for period
+    const existing = await prisma.payslip.findFirst({
+        where: {
+            userId: data.userId,
+            period: data.period
+        }
+    })
+
+    if (existing) throw new Error("Payslip already exists for this period")
+
+    // Get tenantId from user to be safe
+    const targetUser = await prisma.user.findUnique({ where: { id: data.userId } })
+    if (!targetUser) throw new Error("Target user not found")
+
+    await prisma.payslip.create({
+        data: {
+            userId: data.userId,
+            tenantId: targetUser.tenantId,
+            period: data.period,
+            fileUrl: data.fileUrl,
+            status: DocumentStatus.PENDING
+        }
+    })
+
+    revalidatePath('/dashboard/admin/payslips') // If there was a list
+    return { success: true }
+}
+
+export async function getAllUsers() {
+    const session = await auth()
+    if (!session?.user) return []
+
+    const users = await prisma.user.findMany({
+        select: { id: true, fullName: true, email: true },
+        orderBy: { fullName: 'asc' }
+    })
+    return users
+}

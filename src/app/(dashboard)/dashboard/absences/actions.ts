@@ -57,3 +57,49 @@ export async function getMyAbsences() {
 
     return absences
 }
+
+export async function getPendingAbsences() {
+    const session = await auth()
+    const user = session?.user as any
+
+    if (!user?.id) throw new Error("Unauthorized")
+
+    // In real app, check for ADMIN role
+    // if (user.role !== 'HR_ADMIN') throw new Error("Forbidden")
+
+    const absences = await prisma.absenceReport.findMany({
+        where: {
+            status: AbsenceStatus.PENDING,
+            // tenantId: user.tenantId // Filter by tenant
+        },
+        include: {
+            user: {
+                select: {
+                    fullName: true,
+                    email: true
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'asc'
+        }
+    })
+
+    return absences
+}
+
+export async function updateAbsenceStatus(id: string, status: AbsenceStatus) {
+    const session = await auth()
+    const user = session?.user as any
+
+    if (!user?.id) throw new Error("Unauthorized")
+
+    await prisma.absenceReport.update({
+        where: { id },
+        data: { status }
+    })
+
+    revalidatePath('/dashboard/admin/absences')
+    revalidatePath('/dashboard/absences')
+    return { success: true }
+}

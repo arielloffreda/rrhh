@@ -88,6 +88,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             icon: Frame, // Replacement for Frame
             items: [
                 {
+                    title: "Gestionar Licencias",
+                    url: "/dashboard/admin/absences",
+                    icon: CalendarDays,
+                },
+                {
+                    title: "Subir Recibos",
+                    url: "/dashboard/admin/payslips",
+                    icon: FileText,
+                },
+                {
                     title: "Empleados",
                     url: "/dashboard/employees",
                     icon: Users,
@@ -107,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ]
 
     return (
-        <Sidebar collapsible="icon" {...props}>
+        <Sidebar collapsible="icon" className="glass-sidebar" {...props}>
             <SidebarHeader>
                 <div className="flex gap-2 py-2 text-sidebar-accent-foreground ">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">

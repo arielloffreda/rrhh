@@ -11,8 +11,28 @@ export const authConfig = {
             const isOnDashboard = nextUrl.pathname.startsWith('/dashboard');
             const isOnAuth = nextUrl.pathname.startsWith('/login');
 
+            // Admin Routes Protection
+            const adminRoutes = [
+                '/dashboard/admin/',
+                '/dashboard/employees',
+                '/dashboard/reports',
+                '/dashboard/settings'
+            ];
+            const isOnAdminRoute = adminRoutes.some(route => nextUrl.pathname.startsWith(route));
+
+            // @ts-ignore
+            const userRole = auth?.user?.role;
+            const adminRoles = ['COMPANY_ADMIN', 'HR_ADMIN', 'SUPER_ADMIN'];
+            const isAdmin = userRole && adminRoles.includes(userRole as string);
+
             if (isOnDashboard) {
-                if (isLoggedIn) return true;
+                if (isLoggedIn) {
+                    // Check RBAC
+                    if (isOnAdminRoute && !isAdmin) {
+                        return Response.redirect(new URL('/dashboard', nextUrl));
+                    }
+                    return true;
+                }
                 return false; // Redirect unauthenticated users to login page
             }
 

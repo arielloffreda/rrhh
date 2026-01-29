@@ -24,17 +24,18 @@ import { z } from "zod"
 import { useState } from "react"
 import { toast } from "sonner"
 import { uploadPayslip } from "@/app/(dashboard)/dashboard/payslips/actions"
-import { Upload } from "lucide-react"
+import { Upload, X, FileText } from "lucide-react"
 
 const formSchema = z.object({
     userId: z.string().min(1, "Seleccione un empleado"),
     month: z.string().min(1, "Seleccione un mes"),
     year: z.string().min(4, "Seleccione un año"),
-    // file: z.any() // In real app we validate file
 })
 
 export function UploadPayslipForm({ users }: { users: any[] }) {
     const [loading, setLoading] = useState(false)
+    const [uploading, setUploading] = useState(false)
+    const [fileUrl, setFileUrl] = useState<string | null>(null)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -43,23 +44,54 @@ export function UploadPayslipForm({ users }: { users: any[] }) {
         }
     })
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        setUploading(true)
+        const formData = new FormData()
+        formData.append("file", files[0])
+
+        try {
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            })
+
+            if (!res.ok) throw new Error("Upload failed")
+
+            const data = await res.json()
+            setFileUrl(data.url)
+            toast.success("Archivo subido correctamente")
+        } catch (error) {
+            toast.error("Error al subir archivo")
+            console.error(error)
+        } finally {
+            setUploading(false)
+            e.target.value = ""
+        }
+    }
+
     async function onSubmit(data: z.infer<typeof formSchema>) {
+        if (!fileUrl) {
+            toast.error("Debe subir un archivo PDF")
+            return
+        }
+
         setLoading(true)
         try {
             // Construct date from month/year (first day of month)
             const period = new Date(parseInt(data.year), parseInt(data.month) - 1, 1)
 
-            // Simulate file upload - In real app we upload to S3 here and get URL
-            const fakeUrl = `https://saas-rrhh-bucket.s3.amazonaws.com/payslips/${data.userId}/${period.toISOString()}.pdf`
-
             await uploadPayslip({
                 userId: data.userId,
                 period: period,
-                fileUrl: fakeUrl
+                fileUrl: fileUrl
             })
 
             toast.success("Recibo cargado correctamente")
             form.reset()
+            setFileUrl(null)
         } catch (error: any) {
             toast.error(error.message || "Error al cargar recibo")
         } finally {
@@ -153,14 +185,41 @@ export function UploadPayslipForm({ users }: { users: any[] }) {
 
                         <div className="space-y-2">
                             <FormLabel>Archivo PDF</FormLabel>
-                            <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-muted-foreground bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer">
-                                <Upload className="h-8 w-8 mb-2" />
-                                <span className="text-sm">Haga clic para seleccionar (Simulado)</span>
-                            </div>
+                            {!fileUrl ? (
+                                <div className="relative border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-muted-foreground bg-muted/20 hover:bg-muted/40 transition-colors">
+                                    <Input
+                                        type="file"
+                                        accept=".pdf"
+                                        onChange={handleFileUpload}
+                                        disabled={uploading}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <Upload className="h-8 w-8 mb-2" />
+                                    <span className="text-sm">{uploading ? "Subiendo..." : "Arrastra o selecciona un PDF"}</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-between p-3 border rounded-md bg-green-50 dark:bg-green-900/20">
+                                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                        <FileText className="h-5 w-5" />
+                                        <span className="text-sm font-medium truncate max-w-[200px]">
+                                            Recibo Subido
+                                        </span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setFileUrl(null)}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
 
-                        <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? "Cargando..." : "Subir Recibo"}
+                        <Button type="submit" disabled={loading || uploading || !fileUrl} className="w-full">
+                            {loading ? "Cargando..." : "Guardar Recibo"}
                         </Button>
                     </form>
                 </Form>

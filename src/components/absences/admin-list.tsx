@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, X } from "lucide-react"
+import { Check, X, Paperclip } from "lucide-react"
 import { updateAbsenceStatus } from "@/app/(dashboard)/dashboard/absences/actions"
 import { toast } from "sonner"
 import { AbsenceStatus } from "@prisma/client"
@@ -74,6 +74,22 @@ export function AdminAbsenceList({ absences }: { absences: any[] }) {
                                 </TableCell>
                                 <TableCell className="text-xs max-w-[200px] truncate">
                                     {absence.description || '-'}
+                                    {absence.attachments && Array.isArray(absence.attachments) && absence.attachments.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {absence.attachments.map((url: string, index: number) => (
+                                                <a
+                                                    key={index}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-xs bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 px-2 py-1 rounded hover:underline"
+                                                >
+                                                    <Paperclip className="h-3 w-3" />
+                                                    <span>Adjunto {index + 1}</span>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">

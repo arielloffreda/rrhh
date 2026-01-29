@@ -15,14 +15,38 @@ import {
 } from "@/components/ui/breadcrumb"
 import { UserNav } from "@/components/layout/user-nav"
 
-export default function DashboardLayout({
+import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
+
+export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
+    const session = await auth()
+    const user = session?.user
+
+    // Fetch tenant details
+    let companyName = "Acme Inc"
+    let logoUrl: string | undefined = undefined
+    if (user?.email) {
+        // Assuming user is linked to a tenant, or we fetch the first one for now as per simple architecture
+        // In a real multi-tenant app, we'd use user.tenantId
+        const dbUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            include: { tenant: true }
+        })
+        if (dbUser?.tenant?.name) {
+            companyName = dbUser.tenant.name
+        }
+        if (dbUser?.tenant?.logoUrl) {
+            logoUrl = dbUser.tenant.logoUrl
+        }
+    }
+
     return (
         <SidebarProvider>
-            <AppSidebar />
+            <AppSidebar companyName={companyName} logoUrl={logoUrl} />
             <SidebarInset>
                 <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
                     <div className="flex items-center gap-2">

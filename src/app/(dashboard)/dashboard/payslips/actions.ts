@@ -83,7 +83,8 @@ export async function uploadPayslip(data: { userId: string, period: Date, fileUr
         }
     })
 
-    revalidatePath('/dashboard/admin/payslips') // If there was a list
+    revalidatePath('/dashboard/admin/payslips')
+    revalidatePath('/dashboard/payslips')
     return { success: true }
 }
 

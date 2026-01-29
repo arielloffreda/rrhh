@@ -3,6 +3,7 @@ import { AddEmployeeDialog } from "@/components/employees/add-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { EmployeeActions } from "@/components/employees/actions-menu"
 
 export default async function EmployeesPage() {
     const employees = await getEmployees()
@@ -37,7 +38,23 @@ export default async function EmployeesPage() {
                         <TableBody>
                             {employees.map((employee) => (
                                 <TableRow key={employee.id}>
-                                    <TableCell className="font-medium">{employee.fullName || '-'}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-secondary overflow-hidden">
+                                                {employee.avatarUrl ? (
+                                                    <img src={employee.avatarUrl} alt={employee.fullName || "User"} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <div className="h-full w-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                                                        {(employee.fullName || "U").charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span>{employee.fullName || '-'}</span>
+                                                {employee.jobTitle && <span className="text-xs text-muted-foreground">{employee.jobTitle}</span>}
+                                            </div>
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{employee.email}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline">{employee.role}</Badge>
@@ -46,7 +63,7 @@ export default async function EmployeesPage() {
                                         {new Date(employee.createdAt).toLocaleDateString()}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Badge variant="secondary">Activo</Badge>
+                                        <EmployeeActions employee={employee} />
                                     </TableCell>
                                 </TableRow>
                             ))}

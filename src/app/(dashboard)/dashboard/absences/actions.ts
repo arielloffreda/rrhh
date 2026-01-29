@@ -11,6 +11,7 @@ const absenceSchema = z.object({
     startDate: z.date(),
     endDate: z.date(),
     description: z.string().optional(),
+    attachments: z.array(z.string()).optional(),
 })
 
 export type AbsenceFormValues = z.infer<typeof absenceSchema>
@@ -31,6 +32,7 @@ export async function requestAbsence(data: AbsenceFormValues) {
             startDate: data.startDate,
             endDate: data.endDate,
             description: data.description,
+            attachments: data.attachments || [],
             status: AbsenceStatus.PENDING
         }
     })

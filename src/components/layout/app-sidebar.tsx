@@ -37,7 +37,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ companyName, logoUrl, ...props }: React.ComponentProps<typeof Sidebar> & { companyName?: string; logoUrl?: string }) {
     const { data: session } = useSession()
     const user = session?.user as any
     const role = user?.role
@@ -120,11 +120,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <Sidebar collapsible="icon" className="glass-sidebar" {...props}>
             <SidebarHeader>
                 <div className="flex gap-2 py-2 text-sidebar-accent-foreground ">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                        <Command className="size-4" />
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden">
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={companyName} className="h-full w-full object-contain" />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground">
+                                <Command className="size-4" />
+                            </div>
+                        )}
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">Acme Inc</span>
+                        <span className="truncate font-semibold">{companyName || "Acme Inc"}</span>
                         <span className="truncate text-xs">Enterprise</span>
                     </div>
                 </div>

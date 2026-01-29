@@ -46,7 +46,7 @@ export function SignDialog({ payslip }: SignDialogProps) {
                     {isSigned ? <><CheckCircle className="mr-2 h-4 w-4" /> Ver Recibo</> : <><FileText className="mr-2 h-4 w-4" /> Ver y Firmar</>}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Recibo de Sueldo - {new Date(payslip.period).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</DialogTitle>
                     <DialogDescription>
@@ -55,9 +55,20 @@ export function SignDialog({ payslip }: SignDialogProps) {
                 </DialogHeader>
 
                 {/* PDF Placeholder */}
-                <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-md bg-muted/50">
-                    <p className="text-muted-foreground text-sm">Vista Previa del PDF (Simulación)</p>
-                </div>
+                {/* PDF Viewer */}
+                {payslip.fileUrl ? (
+                    <div className="h-[400px] w-full border rounded-md overflow-hidden bg-slate-100">
+                        <iframe
+                            src={payslip.fileUrl}
+                            className="w-full h-full"
+                            title="Recibo de Sueldo"
+                        />
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-md bg-muted/50">
+                        <p className="text-muted-foreground text-sm">Archivo no disponible</p>
+                    </div>
+                )}
 
                 <DialogFooter className="sm:justify-between">
                     <div className="flex items-center text-xs text-muted-foreground">

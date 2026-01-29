@@ -17,6 +17,7 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
+    FormDescription,
 } from "@/components/ui/form"
 import {
     Select,
@@ -30,7 +31,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { CalendarIcon, Plus } from "lucide-react"
+import { CalendarIcon, Plus, Upload, X } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -52,23 +53,67 @@ const formSchema = z.object({
     startDate: z.date(),
     endDate: z.date(),
     description: z.string().optional(),
+    attachments: z.array(z.string()).optional(),
 })
 
 export function RequestAbsenceDialog() {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [uploading, setUploading] = useState(false)
+    const [attachments, setAttachments] = useState<string[]>([])
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
+        defaultValues: {
+            attachments: [],
+        }
     })
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        setUploading(true)
+        const formData = new FormData()
+        formData.append("file", files[0])
+
+        try {
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            })
+
+            if (!res.ok) throw new Error("Upload failed")
+
+            const data = await res.json()
+            const newAttachments = [...attachments, data.url]
+            setAttachments(newAttachments)
+            form.setValue("attachments", newAttachments)
+            toast.success("Archivo subido correctamente")
+        } catch (error) {
+            toast.error("Error al subir archivo")
+            console.error(error)
+        } finally {
+            setUploading(false)
+            // Clear input
+            e.target.value = ""
+        }
+    }
+
+    const removeAttachment = (indexToRemove: number) => {
+        const newAttachments = attachments.filter((_, index) => index !== indexToRemove)
+        setAttachments(newAttachments)
+        form.setValue("attachments", newAttachments)
+    }
 
     async function onSubmit(data: z.infer<typeof formSchema>) {
         setLoading(true)
         try {
-            await requestAbsence(data as any)
+            await requestAbsence(data)
             toast.success("Solicitud enviada correctamente")
             setOpen(false)
             form.reset()
+            setAttachments([])
         } catch (error) {
             toast.error("Error al enviar solicitud")
         } finally {
@@ -81,11 +126,11 @@ export function RequestAbsenceDialog() {
             <DialogTrigger asChild>
                 <Button><Plus className="mr-2 h-4 w-4" /> Solicitar Licencia</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Nueva Solicitud</DialogTitle>
                     <DialogDescription>
-                        Complete los detalles de su licencia.
+                        Complete los detalles de su licencia y adjunte comprobantes si es necesario.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -112,88 +157,90 @@ export function RequestAbsenceDialog() {
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="startDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Desde</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP")
-                                                    ) : (
-                                                        <span>Seleccionar fecha</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="endDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Hasta</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP")
-                                                    ) : (
-                                                        <span>Seleccionar fecha</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date("1900-01-01")
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="startDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Desde</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full pl-3 text-left font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {field.value ? (
+                                                            format(field.value, "PPP")
+                                                        ) : (
+                                                            <span>Seleccionar fecha</span>
+                                                        )}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    disabled={(date) =>
+                                                        date < new Date("1900-01-01")
+                                                    }
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="endDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Hasta</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "w-full pl-3 text-left font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {field.value ? (
+                                                            format(field.value, "PPP")
+                                                        ) : (
+                                                            <span>Seleccionar fecha</span>
+                                                        )}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    disabled={(date) =>
+                                                        date < new Date("1900-01-01")
+                                                    }
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                         <FormField
                             control={form.control}
                             name="description"
@@ -207,8 +254,49 @@ export function RequestAbsenceDialog() {
                                 </FormItem>
                             )}
                         />
+
+                        {/* File Upload Section */}
+                        <div className="space-y-2">
+                            <FormLabel>Comprobantes</FormLabel>
+                            <FormControl>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="file"
+                                        onChange={handleFileUpload}
+                                        disabled={uploading}
+                                        className="cursor-pointer"
+                                        accept="image/*,.pdf"
+                                    />
+                                    {uploading && <span className="text-sm text-muted-foreground">Subiendo...</span>}
+                                </div>
+                            </FormControl>
+                            <FormDescription>
+                                Sube certificados médicos o comprobantes (PDF, JPG, PNG).
+                            </FormDescription>
+
+                            {attachments.length > 0 && (
+                                <div className="mt-2 space-y-2">
+                                    {attachments.map((url, index) => (
+                                        <div key={index} className="flex items-center justify-between p-2 border rounded-md text-sm">
+                                            <span className="truncate max-w-[300px]">{url.split('/').pop()}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => removeAttachment(index)}
+                                                type="button"
+                                            >
+                                                <X className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <DialogFooter>
-                            <Button type="submit" disabled={loading}>{loading ? "Enviando..." : "Enviar Solicitud"}</Button>
+                            <Button type="submit" disabled={loading || uploading}>
+                                {loading ? "Enviando..." : "Enviar Solicitud"}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>

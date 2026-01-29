@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 export function DailyLog({ entries }: { entries: any[] }) {
     return (
@@ -28,7 +30,7 @@ export function DailyLog({ entries }: { entries: any[] }) {
                         {entries.map((entry) => (
                             <TableRow key={entry.id}>
                                 <TableCell className="font-mono">
-                                    {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {format(new Date(entry.timestamp), "HH:mm", { locale: es })}
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={entry.type === 'ENTRY' ? "default" : "secondary"}>

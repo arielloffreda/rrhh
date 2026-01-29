@@ -41,5 +41,12 @@ export const authConfig = {
             }
             return true;
         },
+        async session({ session, token }) {
+            if (token.role && session.user) {
+                // @ts-ignore
+                session.user.role = token.role as string;
+            }
+            return session;
+        },
     },
 } satisfies NextAuthConfig

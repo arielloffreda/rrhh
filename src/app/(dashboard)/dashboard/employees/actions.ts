@@ -79,7 +79,9 @@ export async function updateEmployee(id: string, data: Partial<EmployeeFormValue
     city?: string,
     state?: string,
     country?: string,
-    avatarUrl?: string
+    avatarUrl?: string,
+    homeLat?: number,
+    homeLng?: number
 }) {
     const session = await auth()
     const user = session?.user as any
@@ -106,6 +108,8 @@ export async function updateEmployee(id: string, data: Partial<EmployeeFormValue
             state: data.state,
             country: data.country,
             avatarUrl: data.avatarUrl,
+            homeLat: data.homeLat,
+            homeLng: data.homeLng,
         }
     })
 

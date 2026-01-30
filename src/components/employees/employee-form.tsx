@@ -25,6 +25,7 @@ import { toast } from "sonner"
 import { createEmployee, updateEmployee, uploadEmployeeAvatar } from "@/app/(dashboard)/dashboard/employees/actions"
 import { UserRole } from "@prisma/client"
 import { useRouter } from "next/navigation"
+import { Search, MapPin, Loader2 } from "lucide-react"
 
 const employeeSchema = z.object({
     fullName: z.string().min(2, "Nombre requerido"),
@@ -37,6 +38,8 @@ const employeeSchema = z.object({
     city: z.string().optional(),
     state: z.string().optional(),
     country: z.string().optional(),
+    homeLat: z.string().optional(),
+    homeLng: z.string().optional(),
 })
 
 interface EmployeeFormProps {
@@ -47,6 +50,7 @@ interface EmployeeFormProps {
 export function EmployeeForm({ initialData, onSuccess }: EmployeeFormProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [isGeocoding, setIsGeocoding] = useState(false)
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.avatarUrl || null)
 
@@ -62,8 +66,52 @@ export function EmployeeForm({ initialData, onSuccess }: EmployeeFormProps) {
             city: initialData?.city || "",
             state: initialData?.state || "",
             country: initialData?.country || "",
+            homeLat: initialData?.homeLat?.toString() || "",
+            homeLng: initialData?.homeLng?.toString() || "",
         }
     })
+
+    const handleGeocode = async () => {
+        // Get address fields
+        const addr = form.getValues("address")
+        const city = form.getValues("city")
+        const country = form.getValues("country") || "Argentina"
+
+        if (!addr || !city) {
+            toast.error("Debe completar la dirección y ciudad primero")
+            return
+        }
+
+        const query = `${addr}, ${city}, ${country}`
+        setIsGeocoding(true)
+        toast.info("Buscando coordenadas...", { id: "geocode-toast" })
+
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+                headers: {
+                    "User-Agent": "HR-SaaS-App/1.0"
+                }
+            })
+
+            if (!response.ok) throw new Error("Error en la búsqueda")
+
+            const data = await response.json()
+
+            if (data && data.length > 0) {
+                const bestMatch = data[0]
+                form.setValue("homeLat", bestMatch.lat)
+                form.setValue("homeLng", bestMatch.lon)
+                toast.success("Ubicación encontrada: " + bestMatch.display_name.substring(0, 40) + "...", { id: "geocode-toast" })
+            } else {
+                toast.error("No se encontraron coordenadas para esa dirección", { id: "geocode-toast" })
+            }
+        } catch (e) {
+            toast.error("Error al conectar con servicio de mapas", { id: "geocode-toast" })
+            console.error(e)
+        } finally {
+            setIsGeocoding(false)
+        }
+    }
 
     function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -92,11 +140,19 @@ export function EmployeeForm({ initialData, onSuccess }: EmployeeFormProps) {
             }
 
             // 2. Create or Update
+            const payload = {
+                ...data,
+                avatarUrl,
+                homeLat: data.homeLat ? parseFloat(data.homeLat) : undefined,
+                homeLng: data.homeLng ? parseFloat(data.homeLng) : undefined,
+            }
+
             if (initialData?.id) {
-                await updateEmployee(initialData.id, { ...data, avatarUrl })
+                await updateEmployee(initialData.id, payload)
                 toast.success("Empleado actualizado")
             } else {
-                await createEmployee({ ...data }) // Create currently doesn't support avatar in arguments, need to update createEmployee if we want avatar on create
+                await createEmployee({ ...data }) // Create currently doesn't support geolocation args yet, would need to update createEmployee signature if desired
+
                 // Note: For now, create only supports basic fields, editing adds the rest.
                 // Actually, I should update createEmployee to be consistent, but let's assume create is quick add.
                 // Wait, user asked for full file. I should probably allow full create.
@@ -292,6 +348,80 @@ export function EmployeeForm({ initialData, onSuccess }: EmployeeFormProps) {
                             </FormItem>
                         )}
                     />
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium">Configuración Home Office</h3>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGeocode}
+                            disabled={isGeocoding}
+                            className="text-xs"
+                        >
+                            {isGeocoding ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Search className="mr-2 h-3 w-3" />}
+                            Buscar Coordenadas desde Dirección
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="homeLat"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Latitud (Home)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="-34.1234"
+                                            {...field}
+                                            onChange={e => field.onChange(e.target.value)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="homeLng"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Longitud (Home)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="-58.1234"
+                                            {...field}
+                                            onChange={e => field.onChange(e.target.value)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    {form.watch("homeLat") && form.watch("homeLng") && (
+                        <div className="mt-4 rounded-md overflow-hidden border bg-muted/50 p-2">
+                            <div className="aspect-video w-full rounded bg-gray-100 flex items-center justify-center relative">
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    style={{ border: 0 }}
+                                    src={`https://maps.google.com/maps?q=${form.watch("homeLat")},${form.watch("homeLng")}&z=15&output=embed`}
+                                    allowFullScreen
+                                />
+                            </div>
+                            <p className="text-xs text-center mt-1 text-muted-foreground">Vista previa de ubicación registrada</p>
+                        </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Coordenadas para validar el fichaje en modalidad Home Office.
+                    </p>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">

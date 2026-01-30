@@ -16,7 +16,8 @@ import {
     CalendarDays,
     FileText,
     Users,
-    LayoutDashboard
+    LayoutDashboard,
+    MapPin
 } from "lucide-react"
 
 import {
@@ -108,9 +109,19 @@ export function AppSidebar({ companyName, logoUrl, ...props }: React.ComponentPr
                     icon: PieChart,
                 },
                 {
+                    title: "Reporte Fichada",
+                    url: "/dashboard/reports/attendance",
+                    icon: MapPin, // Using MapPin since it relates to location/tracking
+                },
+                {
                     title: "Configuración",
                     url: "/dashboard/settings",
                     icon: Settings2,
+                },
+                {
+                    title: "Geolocalización",
+                    url: "/dashboard/settings/geolocation",
+                    icon: Map,
                 },
             ]
         }

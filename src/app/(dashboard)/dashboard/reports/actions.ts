@@ -52,20 +52,37 @@ export async function getAbsenceDetails() {
     }))
 }
 
-export async function getTimeEntryDetails() {
+export async function getDetailedAttendanceReport(filters?: {
+    employeeId?: string,
+    startDate?: Date,
+    endDate?: Date
+}) {
     const session = await auth()
     const user = session?.user as any
     if (!user?.tenantId) return []
 
+    const whereClause: any = {
+        tenantId: user.tenantId
+    }
+
+    if (filters?.employeeId && filters.employeeId !== "ALL") {
+        whereClause.userId = filters.employeeId
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+        whereClause.timestamp = {}
+        if (filters.startDate) whereClause.timestamp.gte = filters.startDate
+        if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+    }
+
     const entries = await prisma.timeEntry.findMany({
-        where: { tenantId: user.tenantId },
+        where: whereClause,
         include: {
             user: {
                 select: { fullName: true, email: true }
             }
         },
-        orderBy: { timestamp: 'desc' },
-        take: 100 // Limit for performance for now
+        orderBy: { timestamp: 'desc' }
     })
 
     return entries.map(e => ({
@@ -74,6 +91,9 @@ export async function getTimeEntryDetails() {
         type: e.type,
         timestamp: e.timestamp.toISOString(),
         mode: e.mode,
-        isVerified: e.isVerified
+        isVerified: e.isVerified,
+        location: e.location,
+        metadata: e.metadata,
+        ipAddress: e.ipAddress
     }))
 }

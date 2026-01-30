@@ -53,6 +53,13 @@ model Tenant {
   state       String?
   country     String?
   logoUrl     String?
+  
+  // Geolocation Configuration
+  officeAddress String?  // Display address
+  officeLat     Float?
+  officeLng     Float?
+  officeRadius  Int      @default(300) // Meters
+
   config      Json?    // Stores branding, work rules, ip restrictions
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -83,6 +90,10 @@ model User {
   city        String?
   state       String?
   country     String?
+  
+  // Geolocation for Home Office
+  homeLat     Float?
+  homeLng     Float?
   
   profile     Json?    // Deprecated in favor of explicit fields, kept for backward comp if any
   createdAt   DateTime @default(now())

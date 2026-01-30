@@ -97,3 +97,29 @@ export async function getDetailedAttendanceReport(filters?: {
         ipAddress: e.ipAddress
     }))
 }
+
+export async function getTimeEntryDetails() {
+    const session = await auth()
+    const user = session?.user as any
+    if (!user?.tenantId) return []
+
+    const entries = await prisma.timeEntry.findMany({
+        where: { tenantId: user.tenantId },
+        include: {
+            user: {
+                select: { fullName: true, email: true }
+            }
+        },
+        orderBy: { timestamp: 'desc' },
+        take: 100
+    })
+
+    return entries.map(e => ({
+        id: e.id,
+        user: e.user.fullName || e.user.email,
+        type: e.type,
+        timestamp: e.timestamp.toISOString(),
+        mode: e.mode,
+        isVerified: e.isVerified
+    }))
+}
